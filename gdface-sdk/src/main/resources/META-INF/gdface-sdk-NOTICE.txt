@@ -16,7 +16,8 @@ that notice must be kept when you redistribute this library or an app that conta
   - SeetaFace6, the open-source release, including its models
     https://github.com/seetafaceengine/SeetaFace6
   - SeetaFace6Open modules: FaceBoxes (face detector), FaceRecognizer6,
-    FaceAntiSpoofingX6, Landmarker, SeetaAuthorize and index
+    FaceAntiSpoofingX6, Landmarker, SeetaMaskDetector (mask detector),
+    SeetaAuthorize and index
     https://github.com/SeetaFace6Open
   - TenniS, the inference engine (libtennis.so)
     https://github.com/TenniS-Open/TenniS
@@ -29,8 +30,8 @@ that notice must be kept when you redistribute this library or an app that conta
     release, which is BSD-licensed.
 
 The license text of SeetaFace6, TenniS, OpenRoleZoo, FaceBoxes, FaceRecognizer6,
-FaceAntiSpoofingX6, Landmarker, SeetaAuthorize and index was compared with the upstream
-repositories and is identical.
+FaceAntiSpoofingX6, Landmarker, SeetaMaskDetector, SeetaAuthorize and index was compared
+with the upstream repositories and is identical.
 
 ================================================================================
 BSD 2-Clause License

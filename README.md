@@ -1,12 +1,13 @@
 # GdFace SDK
 
-On-device face detection, liveness detection and 1:N face search for Android. Free and
-open source, and it works out of the box with a shared public API key.
+On-device face detection, liveness detection, face mask detection and 1:N face search
+for Android. Free and open source, and it works out of the box with a shared public API key.
 
 ## Key Features
 
 - Face detection with 5-point landmarks
 - Face liveness detection (anti-spoofing)
+- Face mask detection: is the person in front of the camera wearing a mask?
 - Face recognition: enroll faces, then find who is in front of the camera (1:N)
 - Runs fully on the device: no face image ever leaves the phone
 - Works offline after the first start on a device
@@ -16,13 +17,14 @@ open source, and it works out of the box with a shared public API key.
 
 GdFace SDK wraps the [SeetaFace6](https://github.com/seetafaceengine/SeetaFace6) engine
 (BSD-2-Clause), compiled from source with the NDK, behind a small Kotlin API. Face
-recognition, liveness and detection all run locally.
+recognition, liveness, mask detection and face detection all run locally.
 
 | Feature | Included |
 |---|---|
 | Face detection | yes |
 | 5-point face landmarks | yes |
 | Face liveness detection | yes |
+| Face mask detection | yes |
 | Face recognition (enroll, 1:N search) | yes |
 | Realtime face rectangle for overlays | yes |
 
@@ -227,10 +229,10 @@ dependencyResolutionManagement {
 and in your app's `build.gradle`:
 
 ```groovy
-implementation 'com.github.ahmadarif-lab:gdface-sdk:v0.1.0'
+implementation 'com.github.ahmadarif-lab:gdface-sdk:v0.2.0'
 ```
 
-`v0.1.0` is a release tag of this repository (see the
+`v0.2.0` is a release tag of this repository (see the
 [releases](https://github.com/ahmadarif-lab/gdface-sdk/releases)). `main-SNAPSHOT` is the
 latest commit of the `main` branch; its content changes, so prefer a release tag.
 
@@ -243,7 +245,7 @@ repository:
 
 ```groovy
 repositories { mavenLocal() }
-dependencies { implementation 'com.ahmadarif.gdface:gdface-sdk:0.1.0-SNAPSHOT' }
+dependencies { implementation 'com.ahmadarif.gdface:gdface-sdk:0.2.0-SNAPSHOT' }
 ```
 
 or copy the `gdface-sdk` folder into your project, add `include ':gdface-sdk'` to your
@@ -297,10 +299,31 @@ downloaded and verified are kept, only the missing ones are fetched. Keep the ap
 foreground during that first download; some manufacturers cut the network of apps that
 are in the background or behind the lock screen.
 
-Threading: `init()` is a `suspend` function, so call it from a coroutine on a background
-dispatcher (the native models are loaded on the calling thread). After it returns, use
-the engine from one thread at a time; it is not thread safe (the quick start above runs
-everything on a single worker thread).
+Threading: `init()` and `initMaskDetection()` are `suspend` functions, so call them from a
+coroutine on a background dispatcher (the native models are loaded on the calling
+thread). After they return, use the engine from one thread at a time; it is not thread
+safe (the quick start above runs everything on a single worker thread).
+
+- Step Three (optional): mask detection
+
+Only if you use `detectMask()`. It fetches the small (0.9 MB) mask model the same way
+`init()` fetches the others, so the AAR stays small and apps that never ask for a mask
+download and load nothing extra. Once the model is cached it needs no network.
+
+```kotlin
+lifecycleScope.launch {
+    try {
+        engine.initMaskDetection()   // the same progressListener and exceptions as init()
+    } catch (e: GdFaceLicenseException) {
+        // mask detection is not available; init() and recognition are not affected
+    }
+}
+```
+
+The authorization service must list `mask_detector.csta` (see
+[`API_CONTRACT.md`](API_CONTRACT.md)). One that does not makes this call throw
+`GdFaceLicenseException.MalformedResponse` and nothing else changes. On a device that
+already has the other models this costs one extra authorization request, once.
 
 ### 3. SDK Classes
 
@@ -332,6 +355,16 @@ everything on a single worker thread).
   A match needs a similarity of at least `GdFaceEngine.DEFAULT_RECOGNIZE_THRESHOLD`
   (0.62). That value has not been calibrated strictly yet: 84% was measured for one face
   on one device.
+
+- GdFaceEngine.MaskResult
+
+  The result of one `detectMask()` call.
+
+  | Result | Meaning |
+  |---|---|
+  | `NoFace` | No face was found in the frame. |
+  | `Unavailable` | No answer: `init()` or `initMaskDetection()` has not finished. Not the same as `NoFace`. |
+  | `Detected(hasMask, score, rect)` | `hasMask` is true when the face wears a mask. `score` (0..1) is how sure the model is that a mask is worn; `hasMask` is `score >= 0.5`. |
 
 - GdFaceLicenseException
 
@@ -387,6 +420,24 @@ Detection only (no landmarks, liveness or matching), so it is cheap enough to ru
 every frame, for example to keep a face overlay smooth. It returns the largest face in
 the frame, or `null`.
 
+#### - Detect a mask
+
+```kotlin
+when (val result = engine.detectMask(bitmap)) {
+    is GdFaceEngine.MaskResult.Detected -> { /* result.hasMask, result.score, result.rect */ }
+    GdFaceEngine.MaskResult.NoFace -> { }
+    GdFaceEngine.MaskResult.Unavailable -> { }
+}
+```
+
+Finds the largest face in the frame and tells whether it wears a face mask. It runs face
+detection plus one small extra model, so throttle it like `recognize()` unless you need
+an answer on every frame. It needs `init()` and `initMaskDetection()` (see
+[Initializing the SDK](#2-initializing-the-sdk)) to have finished first.
+
+It only reports the mask. It does not change how `recognize()` treats a masked face: the
+recognizer is the standard SeetaFace6 model, not its mask-specific one.
+
 #### - Manage enrolled faces
 
 ```kotlin
@@ -434,7 +485,7 @@ Repository layout:
 
 - **JitPack** is set up and verified: it builds this repository on demand (a build of
   `main` succeeds and serves the AAR, POM and sources). Pushing a Git tag such as
-  `v0.1.0` publishes that version; nothing else is needed.
+  `v0.2.0` publishes that version; nothing else is needed.
 - **Maven Central** is not set up. It needs, one time, a Sonatype Central account with a
   verified namespace, GPG-signed artifacts, and `<developers>` and `<scm>` blocks in the
   POM (the license block is already there). It is the better long-term home.
@@ -455,5 +506,16 @@ notices are in [`NOTICE`](NOTICE).
   checksum-verifies the five models, and initializes the engine in about 7 seconds
   including the download. Face detection, landmarks, liveness and the 1:N query then run
   on live camera frames.
+- Mask detection, checked on the same device (CPH2651) with the sample app and the hosted
+  service: `initMaskDetection()` downloads `mask_detector.csta` (938,356 bytes, SHA-256
+  verified) next to the models already there, and later launches need no network. The
+  native libraries (built from the upstream SeetaMaskDetector sources with NDK r28) load
+  and `detectMask()` runs on live camera frames. Faces without a mask came back as
+  `hasMask = false` with a score of about 0.001 to 0.04 over dozens of frames. Against a
+  service that does not list the model, the call fails cleanly with `MalformedResponse`
+  and everything else keeps working. Faces wearing a mask were then tried by hand by the
+  maintainer on the same device and reported as detected; no scores were recorded. Not
+  verified: the `score >= 0.5` decision, which is the model's own and has not been
+  calibrated here, and any device other than this one.
 - Not covered by automated tests yet: the device checks above were done by hand with the
   sample app.

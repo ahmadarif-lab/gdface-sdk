@@ -25,7 +25,7 @@ POST https://gdsupport.greatdayhr.com/api/sdk/gdface/authorize
 ```json
 {
   "packageId": "com.example.myapp",
-  "sdkVersion": "0.1.0",
+  "sdkVersion": "0.2.0",
   "modelVariant": "full"
 }
 ```
@@ -53,6 +53,19 @@ POST https://gdsupport.greatdayhr.com/api/sdk/gdface/authorize
 
 All five entries must be present with exactly these names (`GdFaceModelProvider.REQUIRED_MODEL_NAMES`);
 the client treats a response that lacks one as `MalformedResponse`.
+
+A sixth, optional entry is used by mask detection (`GdFaceEngine.initMaskDetection()`):
+
+```json
+{ "name": "mask_detector.csta", "url": "https://...", "sha256": "<hex64>", "sizeBytes": 938356 }
+```
+
+It is not among the required models, so a backend that does not list it keeps working for
+everything else. It is only asked for by `initMaskDetection()`, which fails with
+`MalformedResponse` when the entry is missing. Whatever a response lists is downloaded and
+verified like the other models, so once the entry is there a new device fetches it during
+its first `init()` too (0.9 MB). A device that already has the five models sends one more
+authorization request, once, the first time `initMaskDetection()` is called.
 
 - `url`: a signed, short-lived link (30 minutes on the hosted service). The client
   issues a plain `GET`, no `X-API-Key` header.

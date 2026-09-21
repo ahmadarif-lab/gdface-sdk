@@ -1,9 +1,10 @@
-// GdFace SDK: Android library for on-device face detection, liveness and 1:N face
-// search. The native engine is prebuilt (jniLibs); the ~170MB .csta models are NOT
-// bundled in the AAR. They are downloaded at runtime by GdFaceModelProvider, gated by
-// an API key + the caller's package ID (see API_CONTRACT.md in the repository root).
-// The first init on a device therefore needs a network connection; once the models are
-// cached locally everything works offline.
+// GdFace SDK: Android library for on-device face detection, liveness, mask detection
+// and 1:N face search. The native engine is prebuilt (jniLibs); the ~170MB .csta models
+// are NOT bundled in the AAR (nor is the 0.9MB mask model, see initMaskDetection). They
+// are downloaded at runtime by GdFaceModelProvider, gated by an API key + the caller's
+// package ID (see API_CONTRACT.md in the repository root). The first init on a device
+// therefore needs a network connection; once the models are cached locally everything
+// works offline.
 plugins {
     id 'com.android.library'
     id 'org.jetbrains.kotlin.android'
@@ -71,7 +72,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.ahmadarif.gdface'
             artifactId = 'gdface-sdk'
-            version = project.findProperty('gdfaceSdkVersion') ?: '0.1.0-SNAPSHOT'
+            version = project.findProperty('gdfaceSdkVersion') ?: '0.2.0-SNAPSHOT'
 
             afterEvaluate {
                 from components.release
@@ -79,7 +80,7 @@ publishing {
 
             pom {
                 name = 'GdFace SDK'
-                description = 'On-device face detection, liveness and 1:N face search for Android. ' +
+                description = 'On-device face detection, liveness, mask detection and 1:N face search for Android. ' +
                         'Models are downloaded at runtime through an API-key gate.'
                 licenses {
                     license {

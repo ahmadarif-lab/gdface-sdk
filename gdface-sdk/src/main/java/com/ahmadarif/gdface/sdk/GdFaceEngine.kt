@@ -8,6 +8,7 @@ import com.seeta.sdk.FaceAntiSpoofing
 import com.seeta.sdk.FaceDatabase
 import com.seeta.sdk.FaceDetector
 import com.seeta.sdk.FaceLandmarker
+import com.seeta.sdk.MaskDetector
 import com.seeta.sdk.SeetaDevice
 import com.seeta.sdk.SeetaImageData
 import com.seeta.sdk.SeetaModelSetting
@@ -17,7 +18,7 @@ import java.io.File
 import org.json.JSONObject
 
 /**
- * On-device face detection, liveness and 1:N face search for Android.
+ * On-device face detection, liveness, mask detection and 1:N face search for Android.
  *
  * Built on the open-source SeetaFace6 engine (BSD-2-Clause), compiled from source with
  * the NDK and bridged to Java by the vendored `com.seeta.sdk` wrapper. Copyright and
@@ -28,11 +29,16 @@ import org.json.JSONObject
  * app's package ID (see API_CONTRACT.md); afterwards they are cached and no network is
  * needed. [authorizeUrl] and [apiKey] default to whatever was set on [GdFaceSDK], which
  * itself defaults to the hosted GdFace service and its free public key ([GdFaceConfig]).
+ * Mask detection has its own small (0.9MB) model, fetched the same way but only when the
+ * app calls [initMaskDetection].
  *
  * STATUS: the native pipeline (detect + landmark + liveness + match) was verified on a
  * real device with the same "full" recognizer model this path downloads. The server
  * side of the download flow is verified end to end; the Android download client
- * ([GdFaceModelProvider]) has not been exercised on a device yet.
+ * ([GdFaceModelProvider]) has not been exercised on a device yet. Mask detection, with
+ * its model downloaded from the hosted service, ran on a device (CPH2651): unmasked faces
+ * gave "no mask", and masked faces were tried by hand and reported as detected (no scores
+ * recorded). The 0.5 decision has not been calibrated.
  */
 class GdFaceEngine(
     private val context: Context,
@@ -58,12 +64,30 @@ class GdFaceEngine(
         data class Matched(val faceId: String, val score: Float, val rect: Rect) : RecognizeResult()
     }
 
+    /** The result of one [detectMask] call. */
+    sealed class MaskResult {
+        /** No face was found in the frame. */
+        data object NoFace : MaskResult()
+
+        /** [init] or [initMaskDetection] has not finished (or was never called), so no
+         * answer was produced. Not the same as [NoFace]. */
+        data object Unavailable : MaskResult()
+
+        /** [score] (0..1) is how sure the model is that the face in [rect] wears a mask;
+         * [hasMask] is true when it reaches the model's own threshold (0.5). */
+        data class Detected(val hasMask: Boolean, val score: Float, val rect: Rect) : MaskResult()
+    }
+
     private val modelProvider = GdFaceModelProvider(context, authorizeUrl, apiKey)
 
     private var detector: FaceDetector? = null
     private var landmarker: FaceLandmarker? = null
     private var antiSpoofing: FaceAntiSpoofing? = null
     private var database: FaceDatabase? = null
+
+    // Set by initMaskDetection(), not init(): apps that never ask for a mask download and
+    // load nothing extra, and a problem on this optional path cannot break init().
+    private var maskDetector: MaskDetector? = null
 
     private val faceIdByIndex = mutableMapOf<Long, String>()
     private val indexByFaceId = mutableMapOf<String, Long>()
@@ -117,6 +141,36 @@ class GdFaceEngine(
         if (databaseFile.exists()) {
             database?.Load(databaseFile.absolutePath)
         }
+    }
+
+    /**
+     * Makes sure the mask detector model is on the device (downloading it if needed, like
+     * [init]) and loads it, so [detectMask] can answer. Optional: [init] alone is enough
+     * for everything else, and it does not change how [init] behaves.
+     *
+     * Call it from a background coroutine, once per launch, and finish it before using
+     * the engine from the analysis thread. It is idempotent, and once the model is cached
+     * it needs no network. The authorization service must list `mask_detector.csta` (see
+     * API_CONTRACT.md); one that does not fails this call with
+     * [GdFaceLicenseException.MalformedResponse] and leaves [init] and everything else
+     * working.
+     *
+     * @throws GdFaceLicenseException if authorization or the download fails, as for [init].
+     */
+    suspend fun initMaskDetection(progressListener: GdFaceDownloadProgressListener? = null) {
+        if (maskDetector != null) return
+
+        val dir = modelProvider.ensureModelsAvailable(
+            progressListener,
+            GdFaceModelProvider.REQUIRED_MODEL_NAMES + GdFaceModelProvider.MASK_MODEL_NAME
+        )
+        maskDetector = MaskDetector(
+            SeetaModelSetting(
+                0,
+                arrayOf(File(dir, GdFaceModelProvider.MASK_MODEL_NAME).absolutePath),
+                SeetaDevice.SEETA_DEVICE_CPU
+            )
+        )
     }
 
     /** Enrolls one face from a full photo. Detection and landmarks are run here; the
@@ -198,6 +252,33 @@ class GdFaceEngine(
         return rect.toAndroidRect()
     }
 
+    /** Tells whether the largest face in [bitmap] wears a face mask. Runs face detection
+     * (no landmarks, liveness or matching) plus one small model, so throttle it like
+     * [recognize] unless an answer on every frame is needed. Needs [init] and
+     * [initMaskDetection] to have finished. It only reports the mask: how [recognize]
+     * treats a masked face is not changed, the recognizer model is the standard one. */
+    fun detectMask(bitmap: Bitmap): MaskResult {
+        val det = detector ?: return MaskResult.Unavailable
+        val mask = maskDetector ?: return MaskResult.Unavailable
+        val image = bitmap.toNativeImageBgr()
+        val faces = try {
+            det.Detect(image)
+        } catch (e: Exception) {
+            Log.e(TAG, "FaceDetector.Detect failed (detectMask)", e)
+            return MaskResult.Unavailable
+        }
+        if (faces.isNullOrEmpty()) return MaskResult.NoFace
+        val rect = faces.maxByOrNull { it.width.toLong() * it.height.toLong() } ?: return MaskResult.NoFace
+        return try {
+            val score = FloatArray(1)
+            val hasMask = mask.detect(image, rect, score)
+            MaskResult.Detected(hasMask, score[0], rect.toAndroidRect())
+        } catch (e: Exception) {
+            Log.e(TAG, "MaskDetector.detect failed", e)
+            MaskResult.Unavailable
+        }
+    }
+
     fun unenroll(faceId: String) {
         val index = indexByFaceId.remove(faceId) ?: return
         faceIdByIndex.remove(index)
@@ -237,6 +318,7 @@ class GdFaceEngine(
         landmarker?.dispose(); landmarker = null
         antiSpoofing?.dispose(); antiSpoofing = null
         database?.dispose(); database = null
+        maskDetector?.dispose(); maskDetector = null
     }
 
     // -------------------------------------------------------------------

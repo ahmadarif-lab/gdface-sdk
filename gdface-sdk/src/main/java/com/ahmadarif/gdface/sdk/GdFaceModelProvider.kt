@@ -55,11 +55,17 @@ class GdFaceModelProvider(
      * (when needed) happens here and not in the constructor, so the caller controls when
      * network access happens (e.g. wait for Wi-Fi, show a "downloading the models for
      * the first time" dialog). Safe to call again: it does no network work once the
-     * cache is valid. */
+     * cache is valid.
+     *
+     * [requiredModelNames] is what must be present, both in the cache and in the server's
+     * answer. It defaults to [REQUIRED_MODEL_NAMES]; a caller that needs an optional model
+     * too (see [MASK_MODEL_NAME]) adds its name. Whatever the server lists is downloaded,
+     * required or not. */
     suspend fun ensureModelsAvailable(
-        progressListener: GdFaceDownloadProgressListener? = null
+        progressListener: GdFaceDownloadProgressListener? = null,
+        requiredModelNames: List<String> = REQUIRED_MODEL_NAMES
     ): File = withContext(Dispatchers.IO) {
-        if (isCacheValid()) {
+        if (isCacheValid(requiredModelNames)) {
             Log.d(TAG, "Models are complete in the local cache, skipping the download")
             return@withContext modelsDir
         }
@@ -67,7 +73,7 @@ class GdFaceModelProvider(
         Log.i(TAG, "Model cache is incomplete or missing, requesting authorization from $authorizeUrl")
         val models = requestAuthorization()
 
-        val missingNames = REQUIRED_MODEL_NAMES - models.map { it.name }.toSet()
+        val missingNames = requiredModelNames - models.map { it.name }.toSet()
         if (missingNames.isNotEmpty()) {
             throw GdFaceLicenseException.MalformedResponse(
                 "The authorization response does not include the required models: $missingNames"
@@ -88,7 +94,7 @@ class GdFaceModelProvider(
         modelsDir
     }
 
-    private fun isCacheValid(): Boolean {
+    private fun isCacheValid(requiredModelNames: List<String>): Boolean {
         if (!manifestFile.exists()) return false
         return try {
             val manifest = JSONObject(manifestFile.readText())
@@ -101,7 +107,7 @@ class GdFaceModelProvider(
                 val file = File(modelsDir, name)
                 if (!file.exists() || file.length() != entry.getLong("sizeBytes")) return false
             }
-            namesInManifest.containsAll(REQUIRED_MODEL_NAMES)
+            namesInManifest.containsAll(requiredModelNames)
         } catch (e: JSONException) {
             Log.e(TAG, "Model manifest is corrupt, treating the cache as invalid", e)
             false
@@ -274,7 +280,7 @@ class GdFaceModelProvider(
         /** Sent to the backend with every authorization request. The hosted service logs
          * it; a backend MAY also use it to decide what to send back if the contract ever
          * changes between SDK versions. */
-        const val SDK_VERSION = "0.1.0"
+        const val SDK_VERSION = "0.2.0"
 
         val REQUIRED_MODEL_NAMES = listOf(
             "face_detector.csta",
@@ -283,5 +289,10 @@ class GdFaceModelProvider(
             "fas_first.csta",
             "fas_second.csta"
         )
+
+        /** Optional sixth model, needed only by [GdFaceEngine.initMaskDetection]. It is
+         * NOT in [REQUIRED_MODEL_NAMES] on purpose: a backend that does not list it must
+         * keep working for everything else. */
+        const val MASK_MODEL_NAME = "mask_detector.csta"
     }
 }

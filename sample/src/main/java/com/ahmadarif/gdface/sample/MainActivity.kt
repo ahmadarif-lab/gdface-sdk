@@ -30,7 +30,7 @@ import kotlinx.coroutines.withContext
 
 /**
  * Minimal GdFace SDK demo: downloads the models on first run, shows the front camera and
- * lets you enroll the face in front of it and see it recognized.
+ * lets you enroll the face in front of it, see it recognized and see whether it wears a mask.
  *
  * The engine is created with no configuration at all, so it uses the free public API key
  * and the hosted authorization service that come with the SDK.
@@ -109,6 +109,14 @@ class MainActivity : ComponentActivity() {
                             }
                         }
                     })
+                    // Optional feature: if it fails, recognition still works and the mask
+                    // line just says "unavailable". Done before `ready`, so the analysis
+                    // thread never uses the engine while this is still running.
+                    try {
+                        engine.initMaskDetection()
+                    } catch (e: GdFaceLicenseException) {
+                        Log.w(TAG, "Mask detection is not available: ${e.javaClass.simpleName}: ${e.message}")
+                    }
                 }
                 ready = true
                 Log.i(TAG, "SDK ready in ${SystemClock.elapsedRealtime() - startedAt} ms")
@@ -167,8 +175,10 @@ class MainActivity : ComponentActivity() {
             lastRecognizeAt = now
 
             val result = engine.recognize(bitmap, requireLiveness = true)
-            Log.i(TAG, "recognize -> $result")
-            runOnUiThread { resultText.text = describe(result) }
+            val mask = engine.detectMask(bitmap)
+            Log.i(TAG, "recognize -> $result, mask -> $mask")
+            val text = listOf(describe(result), describe(mask)).filter { it.isNotEmpty() }.joinToString("\n")
+            runOnUiThread { resultText.text = text }
         } finally {
             image.close()
         }
@@ -179,6 +189,14 @@ class MainActivity : ComponentActivity() {
         is GdFaceEngine.RecognizeResult.NotRecognized -> "Live face, not recognized"
         is GdFaceEngine.RecognizeResult.LivenessFailed -> "Liveness check failed"
         GdFaceEngine.RecognizeResult.NoFace -> "No face"
+    }
+
+    // "No face" is already shown by the recognize line, so it adds nothing here.
+    private fun describe(result: GdFaceEngine.MaskResult): String = when (result) {
+        is GdFaceEngine.MaskResult.Detected ->
+            "Mask: ${if (result.hasMask) "yes" else "no"}  (mask score ${(result.score * 100).toInt()}%)"
+        GdFaceEngine.MaskResult.Unavailable -> "Mask detection unavailable"
+        GdFaceEngine.MaskResult.NoFace -> ""
     }
 
     private fun toast(message: String) = Toast.makeText(this, message, Toast.LENGTH_SHORT).show()
