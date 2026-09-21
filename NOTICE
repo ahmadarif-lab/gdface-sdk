@@ -2,14 +2,32 @@ GdFace SDK
 Copyright 2026 The GdFace SDK contributors
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
-GdFace SDK bundles and builds on third-party open-source software. The notices below
-must be kept when you redistribute this library or apps that contain it.
+This library bundles and builds on the third-party software below. All of it is
+published by SeetaTech under the BSD 2-Clause License reproduced after the list, and
+that notice must be kept when you redistribute this library or an app that contains it.
+
+  - SeetaFace6, the open-source release, including its models
+    https://github.com/seetafaceengine/SeetaFace6
+  - SeetaFace6Open modules: FaceBoxes (face detector), FaceRecognizer6,
+    FaceAntiSpoofingX6, Landmarker, SeetaAuthorize and index
+    https://github.com/SeetaFace6Open
+  - TenniS, the inference engine (libtennis.so)
+    https://github.com/TenniS-Open/TenniS
+  - OpenRoleZoo, a utility library linked into libtennis.so
+    https://github.com/SeetaFace6Open/OpenRoleZoo
+  - SeetaFace6JNI, the Java wrapper (package com.seeta.sdk)
+    https://github.com/SeetaFace6Open/SeetaFace6JNI
+    This repository has no license file of its own. It is published by the same
+    authors alongside the components above, as part of the SeetaFace6 open-source
+    release, which is BSD-licensed.
+
+The license text of SeetaFace6, TenniS, OpenRoleZoo, FaceBoxes, FaceRecognizer6,
+FaceAntiSpoofingX6, Landmarker, SeetaAuthorize and index was compared with the upstream
+repositories and is identical.
 
 ================================================================================
-SeetaFace6  (detection, landmarks, recognition, anti-spoofing, models, Java wrapper)
-https://github.com/seetafaceengine/SeetaFace6
---------------------------------------------------------------------------------
 BSD 2-Clause License
+--------------------------------------------------------------------------------
 
 Copyright (c) 2019, SeetaTech,
 Institute of Computing Technology, Chinese Academy of Sciences, Beijing, China
@@ -22,27 +40,3 @@ Redistribution and use in source and binary forms, with or without modification,
 2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
 
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-================================================================================
-TenniS  (inference engine, libtennis.so)
-https://github.com/TenniS-Open/TenniS
---------------------------------------------------------------------------------
-BSD 2-Clause License
-
-Copyright (c) 2019, SeetaTech,
-Institute of Computing Technology, Chinese Academy of Sciences, Beijing, China
-All rights reserved.
-
-Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice, this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice, this list of conditions and the following disclaimer in the documentation and/or other materials provided with the distribution.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-
-================================================================================
-OpenRoleZoo  (utility library linked into libtennis.so)
---------------------------------------------------------------------------------
-[Verify before the first public release: the license text of OpenRoleZoo could not be
-retrieved automatically when this file was written. Add its copyright notice here.]
