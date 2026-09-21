@@ -53,34 +53,43 @@ model cache is empty or invalid (first run, cleared app data, model update).
 
 ### 1. Set up
 
-**From source** (works today). Clone this repository and either copy the `gdface-sdk`
-folder into your project, or install it into your local Maven repository:
+**From JitPack** (public, no account needed). In your `settings.gradle` (or root
+`build.gradle`) add the repository:
+
+```groovy
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+}
+```
+
+and in your app's `build.gradle`:
+
+```groovy
+implementation 'com.github.ahmadarif-lab:gdface-sdk:<version>'
+```
+
+`<version>` is a release tag of this repository (see the
+[releases](https://github.com/ahmadarif-lab/gdface-sdk/releases)); use `main-SNAPSHOT`
+for the latest commit of the `main` branch.
+
+**From source.** Clone this repository and install the library into your local Maven
+repository:
 
 ```
 ./gradlew :gdface-sdk:publishToMavenLocal
 ```
-
-then, in your app:
 
 ```groovy
 repositories { mavenLocal() }
 dependencies { implementation 'com.greatdayhr.gdface:gdface-sdk:0.1.0-SNAPSHOT' }
 ```
 
-To use it as a module instead, add to your `settings.gradle`
-
-```groovy
-include ':gdface-sdk'
-```
-
-and to your app's `build.gradle`
-
-```groovy
-implementation project(':gdface-sdk')
-```
-
-**From a public Maven repository** (once published, see [Publishing](#publishing)): the
-same `implementation` line, with the coordinates shown on the release page.
+or copy the `gdface-sdk` folder into your project, add `include ':gdface-sdk'` to your
+`settings.gradle` and `implementation project(':gdface-sdk')` to your app.
 
 ### 2. Initializing the SDK
 
@@ -256,16 +265,12 @@ Repository layout:
 
 ## Publishing
 
-Public distribution is not set up yet.
-
-- **JitPack** needs no account or signing: it builds a GitHub tag of this repository on
-  demand and serves the AAR. It is the fastest way to make the library usable with
-  `implementation` publicly.
-- **Maven Central** needs, one time, a Sonatype Central account with a verified
-  namespace, GPG-signed artifacts, and `<developers>` and `<scm>` blocks in the POM (the
-  license block is already there). It is the better long-term home.
-
-Both build on the `publishToMavenLocal` task that already works.
+- **JitPack** is set up and verified: it builds this repository on demand (a build of
+  `main` succeeds and serves the AAR, POM and sources). Pushing a Git tag such as
+  `v0.1.0` publishes that version; nothing else is needed.
+- **Maven Central** is not set up. It needs, one time, a Sonatype Central account with a
+  verified namespace, GPG-signed artifacts, and `<developers>` and `<scm>` blocks in the
+  POM (the license block is already there). It is the better long-term home.
 
 ## License
 
