@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sdk
+package com.ahmadarif.gdface.sdk
 
 import android.content.Context
 import android.util.Log
@@ -76,7 +76,13 @@ class GdFaceModelProvider(
 
         modelsDir.mkdirs()
         models.forEachIndexed { index, model ->
-            downloadAndVerify(model, index, models.size, progressListener)
+            if (isAlreadyDownloaded(model)) {
+                // Left over from an interrupted earlier attempt: no need to fetch it again.
+                Log.d(TAG, "Model ${model.name} is already downloaded and verified, skipping")
+                progressListener?.onFileProgress(model.name, index, models.size, model.sizeBytes, model.sizeBytes)
+            } else {
+                downloadAndVerify(model, index, models.size, progressListener)
+            }
         }
         saveManifest(models)
         modelsDir
@@ -98,6 +104,22 @@ class GdFaceModelProvider(
             namesInManifest.containsAll(REQUIRED_MODEL_NAMES)
         } catch (e: JSONException) {
             Log.e(TAG, "Model manifest is corrupt, treating the cache as invalid", e)
+            false
+        }
+    }
+
+    private fun isAlreadyDownloaded(model: GdFaceModelInfo): Boolean {
+        val file = File(modelsDir, model.name)
+        if (!file.isFile || file.length() != model.sizeBytes) return false
+        return try {
+            val digest = MessageDigest.getInstance("SHA-256")
+            file.inputStream().use { input ->
+                val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
+                var n: Int
+                while (input.read(buffer).also { n = it } != -1) digest.update(buffer, 0, n)
+            }
+            digest.digest().joinToString("") { "%02x".format(it) }.equals(model.sha256, ignoreCase = true)
+        } catch (e: IOException) {
             false
         }
     }
@@ -183,15 +205,29 @@ class GdFaceModelProvider(
                 body.byteStream().use { input ->
                     FileOutputStream(tempFile).use { output ->
                         val buffer = ByteArray(DOWNLOAD_BUFFER_SIZE)
-                        var n: Int
-                        while (input.read(buffer).also { n = it } != -1) {
-                            output.write(buffer, 0, n)
+                        while (true) {
+                            // A failed read means the connection broke (network problem);
+                            // only a failed write is a local storage problem.
+                            val n = try {
+                                input.read(buffer)
+                            } catch (e: IOException) {
+                                throw GdFaceLicenseException.NetworkError(e)
+                            }
+                            if (n == -1) break
+                            try {
+                                output.write(buffer, 0, n)
+                            } catch (e: IOException) {
+                                throw GdFaceLicenseException.StorageError(model.name, e)
+                            }
                             digest.update(buffer, 0, n)
                             bytesRead += n
                             progressListener?.onFileProgress(model.name, index, total, bytesRead, model.sizeBytes)
                         }
                     }
                 }
+            } catch (e: GdFaceLicenseException) {
+                tempFile.delete()
+                throw e
             } catch (e: IOException) {
                 tempFile.delete()
                 throw GdFaceLicenseException.StorageError(model.name, e)

@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sdk
+package com.ahmadarif.gdface.sdk
 
 import android.content.Context
 import android.graphics.Bitmap

@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sample
+package com.ahmadarif.gdface.sample
 
 import android.Manifest
 import android.graphics.Bitmap
@@ -20,9 +20,9 @@ import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
-import com.greatdayhr.gdface.sdk.GdFaceDownloadProgressListener
-import com.greatdayhr.gdface.sdk.GdFaceEngine
-import com.greatdayhr.gdface.sdk.GdFaceLicenseException
+import com.ahmadarif.gdface.sdk.GdFaceDownloadProgressListener
+import com.ahmadarif.gdface.sdk.GdFaceEngine
+import com.ahmadarif.gdface.sdk.GdFaceLicenseException
 import java.util.concurrent.Executors
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch

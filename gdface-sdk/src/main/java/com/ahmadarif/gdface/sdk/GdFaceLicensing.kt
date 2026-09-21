@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sdk
+package com.ahmadarif.gdface.sdk
 
 /**
  * Data types and errors for the model authorization + download flow. See

@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sdk
+package com.ahmadarif.gdface.sdk
 
 /** Defaults for the hosted GdFace model service. Override them to use your own backend. */
 object GdFaceConfig {

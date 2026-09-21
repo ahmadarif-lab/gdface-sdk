@@ -1,4 +1,4 @@
-package com.greatdayhr.gdface.sdk
+package com.ahmadarif.gdface.sdk
 
 /**
  * SDK-level configuration. Call it once, before creating a [GdFaceEngine], for example in

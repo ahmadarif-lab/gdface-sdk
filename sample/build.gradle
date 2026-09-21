@@ -4,11 +4,11 @@ plugins {
 }
 
 android {
-    namespace 'com.greatdayhr.gdface.sample'
+    namespace 'com.ahmadarif.gdface.sample'
     compileSdk 36
 
     defaultConfig {
-        applicationId 'com.greatdayhr.gdface.sample'
+        applicationId 'com.ahmadarif.gdface.sample'
         minSdk 23
         targetSdk 36
         versionCode 1

@@ -11,7 +11,7 @@ plugins {
 }
 
 android {
-    namespace 'com.greatdayhr.gdface.sdk'
+    namespace 'com.ahmadarif.gdface.sdk'
     compileSdk 36
 
     defaultConfig {
@@ -69,7 +69,7 @@ dependencies {
 publishing {
     publications {
         release(MavenPublication) {
-            groupId = 'com.greatdayhr.gdface'
+            groupId = 'com.ahmadarif.gdface'
             artifactId = 'gdface-sdk'
             version = project.findProperty('gdfaceSdkVersion') ?: '0.1.0-SNAPSHOT'
 

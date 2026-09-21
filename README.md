@@ -35,14 +35,34 @@ download; camera access is up to your app.
 The SDK downloads its models from a server, gated by an API key and your app's package
 ID (see [`API_CONTRACT.md`](API_CONTRACT.md)).
 
-- **Public key (free, built in).** `GdFaceConfig.PUBLIC_API_KEY` works for any package
-  ID, and it is the default, so you do not have to do anything.
-- **Restricted key.** A key scoped to your own package ID(s), if you would rather not
-  share a key with every other app.
+**Free public key, for everyone:**
+
+| | |
+|---|---|
+| API key | `gdsdk_durcZZkpXmcU-v9jaCXmhOD7JGxar4uZ` |
+| Endpoint | `https://gdsupport.greatdayhr.com/api/sdk/gdface/authorize` |
+| Accepts | any package ID |
+
+It is already built into the SDK as the default (`GdFaceConfig.PUBLIC_API_KEY`), so
+`GdFaceEngine(context)` works with no setup. You only need to copy it if you set the key
+explicitly or call the service yourself:
 
 ```kotlin
-GdFaceSDK.setApiKey("gdsdk_...")   // only if you use a key of your own
+GdFaceSDK.setApiKey("gdsdk_durcZZkpXmcU-v9jaCXmhOD7JGxar4uZ")   // same as the default
 ```
+
+```
+curl -X POST https://gdsupport.greatdayhr.com/api/sdk/gdface/authorize \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: gdsdk_durcZZkpXmcU-v9jaCXmhOD7JGxar4uZ" \
+  -d '{"packageId":"com.example.myapp"}'
+```
+
+The answer lists the model files with short-lived download links.
+
+**Restricted key (optional).** A key scoped to your own package ID(s), if you would
+rather not share a key with every other app. Use it the same way, with
+`GdFaceSDK.setApiKey(...)`.
 
 Every authorization request is logged with the app's package ID, SDK version and
 result. That log is how the maintainers see how many apps use the SDK; nothing about
@@ -85,7 +105,7 @@ repository:
 
 ```groovy
 repositories { mavenLocal() }
-dependencies { implementation 'com.greatdayhr.gdface:gdface-sdk:0.1.0-SNAPSHOT' }
+dependencies { implementation 'com.ahmadarif.gdface:gdface-sdk:0.1.0-SNAPSHOT' }
 ```
 
 or copy the `gdface-sdk` folder into your project, add `include ':gdface-sdk'` to your
@@ -133,7 +153,11 @@ lifecycleScope.launch {
 }
 ```
 
-`init()` is idempotent: calling it again after it succeeded does nothing.
+`init()` is idempotent: calling it again after it succeeded does nothing. If the first
+download is interrupted (`NetworkError`), call `init()` again: the files that were already
+downloaded and verified are kept, only the missing ones are fetched. Keep the app in the
+foreground during that first download; some manufacturers cut the network of apps that
+are in the background or behind the lock screen.
 
 ### 3. SDK Classes
 
@@ -274,7 +298,7 @@ Repository layout:
 
 ## License
 
-The GdFace code (the Kotlin API in `com.greatdayhr.gdface.sdk`, the sample app, the docs
+The GdFace code (the Kotlin API in `com.ahmadarif.gdface.sdk`, the sample app, the docs
 and the build scripts) is licensed under the [Apache License 2.0](LICENSE).
 
 The face engine itself is not ours: the `com.seeta.sdk` Java wrapper and the native
