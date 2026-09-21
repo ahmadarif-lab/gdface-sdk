@@ -1,0 +1,93 @@
+// GdFace SDK: Android library for on-device face detection, liveness and 1:N face
+// search. The native engine is prebuilt (jniLibs); the ~170MB .csta models are NOT
+// bundled in the AAR. They are downloaded at runtime by GdFaceModelProvider, gated by
+// an API key + the caller's package ID (see API_CONTRACT.md in the repository root).
+// The first init on a device therefore needs a network connection; once the models are
+// cached locally everything works offline.
+plugins {
+    id 'com.android.library'
+    id 'org.jetbrains.kotlin.android'
+    id 'maven-publish'
+}
+
+android {
+    namespace 'com.greatdayhr.gdface.sdk'
+    compileSdk 36
+
+    defaultConfig {
+        minSdk 23
+        //noinspection ChromeOsAbiSupport
+        ndk {
+            abiFilters.add("arm64-v8a")
+            abiFilters.add("armeabi-v7a")
+        }
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    kotlinOptions {
+        jvmTarget = '17'
+    }
+
+    // Keep the native libraries uncompressed and page-aligned in the APK (required for
+    // devices with a 16 KB memory page size).
+    packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
+    publishing {
+        // The variant that is published; see the `publishing` block below.
+        singleVariant('release') {
+            withSourcesJar()
+        }
+    }
+}
+
+dependencies {
+    implementation 'androidx.core:core-ktx:1.13.1'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.1'
+
+    // Plain OkHttp on purpose (not Retrofit): the SDK must not force an HTTP stack on the
+    // apps that embed it, and it only needs two kinds of requests (authorize + download).
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
+}
+
+// Publishing. `./gradlew :gdface-sdk:publishToMavenLocal` installs the AAR into ~/.m2;
+// JitPack runs the same task. Set the version with -PgdfaceSdkVersion=<version>.
+publishing {
+    publications {
+        release(MavenPublication) {
+            groupId = 'com.greatdayhr.gdface'
+            artifactId = 'gdface-sdk'
+            version = project.findProperty('gdfaceSdkVersion') ?: '0.1.0-SNAPSHOT'
+
+            afterEvaluate {
+                from components.release
+            }
+
+            pom {
+                name = 'GdFace SDK'
+                description = 'On-device face detection, liveness and 1:N face search for Android. ' +
+                        'Models are downloaded at runtime through an API-key gate.'
+                licenses {
+                    license {
+                        name = 'The Apache License, Version 2.0'
+                        url = 'https://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+            }
+        }
+    }
+}
