@@ -25,7 +25,7 @@ POST https://gdsupport.greatdayhr.com/api/sdk/gdface/authorize
 ```json
 {
   "packageId": "com.example.myapp",
-  "sdkVersion": "0.2.0",
+  "sdkVersion": "0.3.0",
   "modelVariant": "full"
 }
 ```

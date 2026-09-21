@@ -53,6 +53,9 @@ class GdFaceEngine(
          * device (CPH2651) with the "full" model. It needs more samples before it can be
          * trusted as a production default. */
         const val DEFAULT_RECOGNIZE_THRESHOLD = 0.62f
+
+        /** SeetaFace6's own default for [livenessThreshold]. */
+        const val DEFAULT_LIVENESS_THRESHOLD = 0.8f
     }
 
     /** The result of one [recognize] call. Four distinct outcomes so a caller can tell
@@ -88,6 +91,18 @@ class GdFaceEngine(
     // Set by initMaskDetection(), not init(): apps that never ask for a mask download and
     // load nothing extra, and a problem on this optional path cannot break init().
     private var maskDetector: MaskDetector? = null
+
+    /** How sure the liveness model must be that a face is a real person, from 0 to 1:
+     * higher rejects more spoofs but also more real faces. It is the "reality" threshold
+     * of SeetaFace6's anti-spoofing; the separate image clarity threshold keeps its own
+     * default. Used by [recognize] when `requireLiveness` is true. May be set before or
+     * after [init]; like every other call, from the one thread that uses the engine. */
+    var livenessThreshold: Float = DEFAULT_LIVENESS_THRESHOLD
+        set(value) {
+            require(value in 0f..1f) { "livenessThreshold must be between 0 and 1, was $value" }
+            field = value
+            applyLivenessThreshold()
+        }
 
     private val faceIdByIndex = mutableMapOf<Long, String>()
     private val indexByFaceId = mutableMapOf<String, Long>()
@@ -136,6 +151,9 @@ class GdFaceEngine(
         database = FaceDatabase(
             SeetaModelSetting(0, arrayOf(File(dir, "face_recognizer.csta").absolutePath), SeetaDevice.SEETA_DEVICE_CPU)
         )
+
+        // Left alone at the default, so that path is exactly what it was before this setting.
+        if (livenessThreshold != DEFAULT_LIVENESS_THRESHOLD) applyLivenessThreshold()
 
         loadIndexMap()
         if (databaseFile.exists()) {
@@ -324,6 +342,17 @@ class GdFaceEngine(
     // -------------------------------------------------------------------
     // Internal helpers
     // -------------------------------------------------------------------
+
+    private fun applyLivenessThreshold() {
+        val spoofing = antiSpoofing ?: return
+        try {
+            val clarity = FloatArray(1)
+            spoofing.GetThreshold(clarity, FloatArray(1))
+            spoofing.SetThreshold(clarity[0], livenessThreshold)
+        } catch (e: Exception) {
+            Log.e(TAG, "Could not set the liveness threshold", e)
+        }
+    }
 
     private data class Detection(val image: SeetaImageData, val rect: SeetaRect, val points: Array<SeetaPointF>)
 

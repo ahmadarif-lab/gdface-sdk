@@ -72,7 +72,7 @@ publishing {
         release(MavenPublication) {
             groupId = 'com.ahmadarif.gdface'
             artifactId = 'gdface-sdk'
-            version = project.findProperty('gdfaceSdkVersion') ?: '0.2.0-SNAPSHOT'
+            version = project.findProperty('gdfaceSdkVersion') ?: '0.3.0-SNAPSHOT'
 
             afterEvaluate {
                 from components.release

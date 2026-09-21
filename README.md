@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/gdface-icon.png" alt="GDFace" width="128">
+</p>
+
 # GdFace SDK
 
 On-device face detection, liveness detection, face mask detection and 1:N face search
@@ -75,8 +79,9 @@ model cache is empty or invalid (first run, cleared app data, model update).
 
 A complete, minimal screen: it downloads the models on first run, shows the front camera
 and writes who is in front of it at the top. The same flow, with an Enroll button and download progress, is
-in [`sample/`](sample/src/main/java/com/ahmadarif/gdface/sample/MainActivity.kt) and runs
-with `./gradlew :sample:installDebug`.
+in [`sample/`](sample/), a complete app (camera and gallery enrollment, recognition with
+liveness and mask detection, real-time detection, a face list, settings, export and import) that runs with
+`./gradlew :sample:installDebug`.
 
 1. Add the dependency (see [Set up](#1-set-up)).
 2. Declare the camera permission in your `AndroidManifest.xml`. The SDK adds `INTERNET`
@@ -229,10 +234,10 @@ dependencyResolutionManagement {
 and in your app's `build.gradle`:
 
 ```groovy
-implementation 'com.github.ahmadarif-lab:gdface-sdk:v0.2.0'
+implementation 'com.github.ahmadarif-lab:gdface-sdk:v0.3.0'
 ```
 
-`v0.2.0` is a release tag of this repository (see the
+`v0.3.0` is a release tag of this repository (see the
 [releases](https://github.com/ahmadarif-lab/gdface-sdk/releases)). `main-SNAPSHOT` is the
 latest commit of the `main` branch; its content changes, so prefer a release tag.
 
@@ -245,7 +250,7 @@ repository:
 
 ```groovy
 repositories { mavenLocal() }
-dependencies { implementation 'com.ahmadarif.gdface:gdface-sdk:0.2.0-SNAPSHOT' }
+dependencies { implementation 'com.ahmadarif.gdface:gdface-sdk:0.3.0-SNAPSHOT' }
 ```
 
 or copy the `gdface-sdk` folder into your project, add `include ':gdface-sdk'` to your
@@ -410,6 +415,19 @@ Runs detection, landmarks, the optional liveness check and the 1:N search on one
 It is the heavy call: throttle it (for example once every 600 ms) instead of calling it
 on every camera frame.
 
+#### - Set the liveness threshold
+
+```kotlin
+engine.livenessThreshold = 0.9f   // stricter than the default, 0.8
+```
+
+How sure the liveness model must be that a face is a real person, from 0 to 1. A higher
+value rejects more spoofs and also more real faces. It applies to `recognize()` with
+`requireLiveness = true`, may be set before or after `init()`, and, like every other call,
+must be made from the one thread that uses the engine. Left alone, the default is
+SeetaFace6's own (`GdFaceEngine.DEFAULT_LIVENESS_THRESHOLD`). It is the model's "reality"
+threshold: the image clarity threshold is not exposed and keeps its default.
+
 #### - Detect a face rectangle
 
 ```kotlin
@@ -477,15 +495,16 @@ Repository layout:
 | Path | Contents |
 |---|---|
 | `gdface-sdk/` | The library: Kotlin API, the `com.seeta.sdk` JNI wrapper and the prebuilt native libraries |
-| `sample/` | The sample app described above |
+| `sample/` | A complete demo app (Jetpack Compose) built on the SDK, see [its README](sample/README.md) |
 | `API_CONTRACT.md` | The authorization protocol, for people who host their own backend |
+| `docs/` | Images used by the READMEs |
 | `NOTICE` | Third-party notices |
 
 ## Publishing
 
 - **JitPack** is set up and verified: it builds this repository on demand (a build of
   `main` succeeds and serves the AAR, POM and sources). Pushing a Git tag such as
-  `v0.2.0` publishes that version; nothing else is needed.
+  `v0.3.0` publishes that version; nothing else is needed.
 - **Maven Central** is not set up. It needs, one time, a Sonatype Central account with a
   verified namespace, GPG-signed artifacts, and `<developers>` and `<scm>` blocks in the
   POM (the license block is already there). It is the better long-term home.
@@ -517,5 +536,7 @@ notices are in [`NOTICE`](NOTICE).
   maintainer on the same device and reported as detected; no scores were recorded. Not
   verified: the `score >= 0.5` decision, which is the model's own and has not been
   calibrated here, and any device other than this one.
+- `livenessThreshold` is used by the sample app's Settings screen. Its effect at values
+  other than the default has not been measured on a device.
 - Not covered by automated tests yet: the device checks above were done by hand with the
   sample app.

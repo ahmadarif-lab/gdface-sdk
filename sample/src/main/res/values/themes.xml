@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The screens are Compose; this only paints what shows before the first frame. -->
+    <style name="Theme.GdFace" parent="android:Theme.Material.NoActionBar">
+        <item name="android:windowBackground">@color/gd_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+</resources>

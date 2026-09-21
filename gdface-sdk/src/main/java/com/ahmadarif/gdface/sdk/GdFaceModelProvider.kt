@@ -280,7 +280,7 @@ class GdFaceModelProvider(
         /** Sent to the backend with every authorization request. The hosted service logs
          * it; a backend MAY also use it to decide what to send back if the contract ever
          * changes between SDK versions. */
-        const val SDK_VERSION = "0.2.0"
+        const val SDK_VERSION = "0.3.0"
 
         val REQUIRED_MODEL_NAMES = listOf(
             "face_detector.csta",

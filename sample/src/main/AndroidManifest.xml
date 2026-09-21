@@ -7,14 +7,17 @@
         android:required="false" />
 
     <application
+        android:name=".GdFaceApp"
         android:allowBackup="false"
-        android:label="GdFace Sample"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:icon="@mipmap/ic_launcher"
+        android:label="GDFace"
+        android:theme="@style/Theme.GdFace">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:screenOrientation="portrait">
+            android:screenOrientation="portrait"
+            android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
