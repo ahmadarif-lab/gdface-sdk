@@ -2,6 +2,13 @@ GdFace SDK
 Copyright 2026 The GdFace SDK contributors
 Licensed under the Apache License, Version 2.0 (see LICENSE).
 
+Scope of the Apache-2.0 license: it covers the GdFace code, that is the Kotlin API in
+gdface-sdk/src/main/java/com/greatdayhr/gdface/sdk, the sample app, the documentation
+and the build scripts. It does NOT cover the face engine. The Java wrapper in
+gdface-sdk/src/main/java/com/seeta/sdk (unmodified upstream files) and the native
+libraries in gdface-sdk/src/main/jniLibs (compiled from the upstream sources) are
+SeetaTech's work and stay under the BSD 2-Clause terms below.
+
 This library bundles and builds on the third-party software below. All of it is
 published by SeetaTech under the BSD 2-Clause License reproduced after the list, and
 that notice must be kept when you redistribute this library or an app that contains it.

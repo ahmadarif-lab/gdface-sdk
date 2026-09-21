@@ -274,8 +274,12 @@ Repository layout:
 
 ## License
 
-GdFace SDK is licensed under the [Apache License 2.0](LICENSE). The bundled third-party
-components keep their own licenses; see [`NOTICE`](NOTICE).
+The GdFace code (the Kotlin API in `com.greatdayhr.gdface.sdk`, the sample app, the docs
+and the build scripts) is licensed under the [Apache License 2.0](LICENSE).
+
+The face engine itself is not ours: the `com.seeta.sdk` Java wrapper and the native
+libraries are SeetaFace6 and TenniS, by SeetaTech, under the BSD 2-Clause License. Their
+notices are in [`NOTICE`](NOTICE).
 
 ## Status
 
