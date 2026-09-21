@@ -69,6 +69,144 @@ result. That log is how the maintainers see how many apps use the SDK; nothing a
 your users or their faces is sent. The SDK only contacts the server when its local
 model cache is empty or invalid (first run, cleared app data, model update).
 
+## Quick start
+
+A complete, minimal screen: it downloads the models on first run, shows the front camera
+and writes who is in front of it at the top. The same flow, with an Enroll button and download progress, is
+in [`sample/`](sample/src/main/java/com/ahmadarif/gdface/sample/MainActivity.kt) and runs
+with `./gradlew :sample:installDebug`.
+
+1. Add the dependency (see [Set up](#1-set-up)).
+2. Declare the camera permission in your `AndroidManifest.xml`. The SDK adds `INTERNET`
+   itself.
+3. Use CameraX and `androidx.activity` for the camera part: `camera-core`,
+   `camera-camera2`, `camera-lifecycle`, `camera-view`, `activity-ktx`,
+   `lifecycle-runtime-ktx`.
+
+```kotlin
+import android.Manifest
+import android.graphics.Bitmap
+import android.graphics.Color
+import android.graphics.Matrix
+import android.os.Bundle
+import android.view.Gravity
+import android.view.ViewGroup
+import android.widget.FrameLayout
+import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.camera.core.CameraSelector
+import androidx.camera.core.ImageAnalysis
+import androidx.camera.core.ImageProxy
+import androidx.camera.core.Preview
+import androidx.camera.lifecycle.ProcessCameraProvider
+import androidx.camera.view.PreviewView
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.lifecycleScope
+import com.ahmadarif.gdface.sdk.GdFaceEngine
+import com.ahmadarif.gdface.sdk.GdFaceLicenseException
+import java.util.concurrent.Executors
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+class MainActivity : ComponentActivity() {
+
+    // No configuration needed: the engine uses the free public API key by default.
+    private val engine by lazy { GdFaceEngine(applicationContext) }
+
+    // The engine is not thread safe: run everything after init() on this one thread.
+    private val worker = Executors.newSingleThreadExecutor()
+
+    @Volatile private var ready = false
+    private lateinit var previewView: PreviewView
+    private lateinit var status: TextView
+
+    private val cameraPermission =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) startCamera()
+        }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        previewView = PreviewView(this)
+        status = TextView(this).apply {
+            setTextColor(Color.WHITE)
+            setBackgroundColor(0x99000000.toInt())
+            textSize = 20f
+            setPadding(32, 32, 32, 32)
+        }
+        setContentView(FrameLayout(this).apply {
+            addView(previewView)
+            addView(status, FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.TOP))
+        })
+
+        // 1. Initialize. The first run on a device downloads the models (~170 MB);
+        //    later runs use the local copy and work offline.
+        lifecycleScope.launch {
+            try {
+                withContext(Dispatchers.Default) { engine.init() }
+                ready = true
+                status.text = "Ready"
+            } catch (e: GdFaceLicenseException) {
+                status.text = "Init failed: ${e.message}"
+            }
+        }
+
+        cameraPermission.launch(Manifest.permission.CAMERA)
+    }
+
+    // 2. Feed camera frames to the engine.
+    private fun startCamera() {
+        val providerFuture = ProcessCameraProvider.getInstance(this)
+        providerFuture.addListener({
+            val preview = Preview.Builder().build()
+                .also { it.setSurfaceProvider(previewView.surfaceProvider) }
+            val analysis = ImageAnalysis.Builder()
+                .setBackpressureStrategy(ImageAnalysis.STRATEGY_KEEP_ONLY_LATEST)
+                .setOutputImageFormat(ImageAnalysis.OUTPUT_IMAGE_FORMAT_RGBA_8888)
+                .build()
+                .also { it.setAnalyzer(worker, ::analyze) }
+            providerFuture.get()
+                .bindToLifecycle(this, CameraSelector.DEFAULT_FRONT_CAMERA, preview, analysis)
+        }, ContextCompat.getMainExecutor(this))
+    }
+
+    private fun analyze(image: ImageProxy) {
+        try {
+            if (!ready) return
+            val bitmap = image.toBitmap().rotated(image.imageInfo.rotationDegrees)
+
+            // To enroll the face in this frame instead: engine.enroll("EMP001", bitmap)
+            val text = when (val result = engine.recognize(bitmap)) {
+                is GdFaceEngine.RecognizeResult.Matched -> "${result.faceId} (${(result.score * 100).toInt()}%)"
+                is GdFaceEngine.RecognizeResult.NotRecognized -> "Live face, not recognized"
+                is GdFaceEngine.RecognizeResult.LivenessFailed -> "Liveness check failed"
+                GdFaceEngine.RecognizeResult.NoFace -> "No face"
+            }
+            runOnUiThread { status.text = text }
+        } finally {
+            image.close()
+        }
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        worker.execute { engine.dispose() }   // 3. Release the native objects.
+        worker.shutdown()
+    }
+}
+
+private fun Bitmap.rotated(degrees: Int): Bitmap {
+    if (degrees == 0) return this
+    return Bitmap.createBitmap(this, 0, 0, width, height, Matrix().apply { postRotate(degrees.toFloat()) }, true)
+}
+```
+
+This exact code was built with R8 minification on and run on a real device. Enrolling is
+one call, `engine.enroll("EMP001", bitmap)`, made from the same worker thread.
+
 ## About SDK
 
 ### 1. Set up
@@ -89,12 +227,12 @@ dependencyResolutionManagement {
 and in your app's `build.gradle`:
 
 ```groovy
-implementation 'com.github.ahmadarif-lab:gdface-sdk:<version>'
+implementation 'com.github.ahmadarif-lab:gdface-sdk:v0.1.0'
 ```
 
-`<version>` is a release tag of this repository (see the
-[releases](https://github.com/ahmadarif-lab/gdface-sdk/releases)); use `main-SNAPSHOT`
-for the latest commit of the `main` branch.
+`v0.1.0` is a release tag of this repository (see the
+[releases](https://github.com/ahmadarif-lab/gdface-sdk/releases)). `main-SNAPSHOT` is the
+latest commit of the `main` branch; its content changes, so prefer a release tag.
 
 **From source.** Clone this repository and install the library into your local Maven
 repository:
@@ -158,6 +296,11 @@ download is interrupted (`NetworkError`), call `init()` again: the files that we
 downloaded and verified are kept, only the missing ones are fetched. Keep the app in the
 foreground during that first download; some manufacturers cut the network of apps that
 are in the background or behind the lock screen.
+
+Threading: `init()` is a `suspend` function, so call it from a coroutine on a background
+dispatcher (the native models are loaded on the calling thread). After it returns, use
+the engine from one thread at a time; it is not thread safe (the quick start above runs
+everything on a single worker thread).
 
 ### 3. SDK Classes
 
